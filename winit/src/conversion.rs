@@ -2,6 +2,7 @@
 //!
 //! [`winit`]: https://github.com/rust-windowing/winit
 //! [`iced_runtime`]: https://github.com/iced-rs/iced/tree/master/runtime
+use crate::core::gesture;
 use crate::core::input_method;
 use crate::core::keyboard;
 use crate::core::mouse;
@@ -305,6 +306,27 @@ pub fn window_event(
         WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
             Some(Event::Window(window::Event::Rescaled(scale_factor as f32)))
         }
+        WindowEvent::PinchGesture { delta, phase, .. } => {
+            Some(Event::Gesture(gesture::Event::Pinch {
+                phase: gesture_phase(phase),
+                delta: delta as f32,
+            }))
+        }
+        WindowEvent::PanGesture { delta, phase, .. } => {
+            Some(Event::Gesture(gesture::Event::Pan {
+                phase: gesture_phase(phase),
+                delta: Point::new(delta.x, delta.y),
+            }))
+        }
+        WindowEvent::RotationGesture { delta, phase, .. } => {
+            Some(Event::Gesture(gesture::Event::Rotation {
+                phase: gesture_phase(phase),
+                delta,
+            }))
+        }
+        WindowEvent::DoubleTapGesture { .. } => {
+            Some(Event::Gesture(gesture::Event::DoubleTap))
+        }
         _ => None,
     }
 }
@@ -534,6 +556,19 @@ pub fn touch_event(touch: winit::event::Touch, scale_factor: f32) -> touch::Even
         winit::event::TouchPhase::Moved => touch::Event::FingerMoved { id, position },
         winit::event::TouchPhase::Ended => touch::Event::FingerLifted { id, position },
         winit::event::TouchPhase::Cancelled => touch::Event::FingerLost { id, position },
+    }
+}
+
+/// Converts a `TouchPhase` from [`winit`] to an [`iced`] gesture phase.
+///
+/// [`winit`]: https://github.com/rust-windowing/winit
+/// [`iced`]: https://github.com/iced-rs/iced/tree/0.12
+fn gesture_phase(phase: winit::event::TouchPhase) -> gesture::Phase {
+    match phase {
+        winit::event::TouchPhase::Started => gesture::Phase::Started,
+        winit::event::TouchPhase::Moved => gesture::Phase::Changed,
+        winit::event::TouchPhase::Ended => gesture::Phase::Ended,
+        winit::event::TouchPhase::Cancelled => gesture::Phase::Cancelled,
     }
 }
 

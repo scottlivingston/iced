@@ -1,4 +1,5 @@
 //! Handle events of a user interface.
+use crate::gesture;
 use crate::input_method;
 use crate::keyboard;
 use crate::mouse;
@@ -24,6 +25,9 @@ pub enum Event {
 
     /// A touch event
     Touch(touch::Event),
+
+    /// A gesture event (pinch, rotation, pan, etc.)
+    Gesture(gesture::Event),
 
     /// An input method event
     InputMethod(input_method::Event),

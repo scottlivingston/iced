@@ -582,6 +582,11 @@ pub mod event {
     pub use iced_futures::event::{listen, listen_raw, listen_url, listen_with};
 }
 
+pub mod gesture {
+    //! Listen and react to trackpad/touchscreen gesture events.
+    pub use crate::core::gesture::{Event, Phase};
+}
+
 pub mod keyboard {
     //! Listen and react to keyboard events.
     pub use crate::core::keyboard::key;
