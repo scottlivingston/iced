@@ -99,25 +99,42 @@ impl Compositor {
             .and_then(|surface| {
                 let capabilities = surface.get_capabilities(&adapter);
 
-                let formats = capabilities.formats.iter().copied();
+                let available: Vec<_> = capabilities.formats.iter().copied().collect();
 
-                log::info!("Available formats: {formats:#?}");
+                log::info!("Available formats: {available:#?}");
 
                 const BLACKLIST: &[wgpu::TextureFormat] = &[
                     wgpu::TextureFormat::Rgb10a2Unorm,
                     wgpu::TextureFormat::Rgb10a2Uint,
                 ];
 
-                let mut formats = formats.filter(|format| {
-                    format.required_features() == wgpu::Features::empty()
-                        && !BLACKLIST.contains(format)
-                });
-
-                let format = if color::GAMMA_CORRECTION {
-                    formats.find(wgpu::TextureFormat::is_srgb)
+                let format = if let Some(preferred) = settings.format {
+                    if available.contains(&preferred) {
+                        log::info!("Using preferred format: {preferred:?}");
+                        Some(preferred)
+                    } else {
+                        log::warn!(
+                            "Preferred format {preferred:?} not supported by surface. \
+                             Available: {available:?}. Falling back to auto-selection."
+                        );
+                        None
+                    }
                 } else {
-                    formats.find(|format| !wgpu::TextureFormat::is_srgb(format))
+                    None
                 };
+
+                let format = format.or_else(|| {
+                    let mut formats = available.iter().copied().filter(|format| {
+                        format.required_features() == wgpu::Features::empty()
+                            && !BLACKLIST.contains(format)
+                    });
+
+                    if color::GAMMA_CORRECTION {
+                        formats.find(wgpu::TextureFormat::is_srgb)
+                    } else {
+                        formats.find(|format| !wgpu::TextureFormat::is_srgb(format))
+                    }
+                });
 
                 let format = format.or_else(|| {
                     log::warn!("No format found!");
@@ -272,6 +289,10 @@ impl graphics::Compositor for Compositor {
 
                 if let Some(present_mode) = settings::present_mode_from_env() {
                     settings.present_mode = present_mode;
+                }
+
+                if let Some(format) = settings::format_from_env() {
+                    settings.format = Some(format);
                 }
 
                 Ok(new(settings, compatible_window, shell).await?)

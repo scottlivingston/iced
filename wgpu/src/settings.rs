@@ -12,6 +12,14 @@ pub struct Settings {
     /// [`Renderer`]: crate::Renderer
     pub present_mode: wgpu::PresentMode,
 
+    /// The preferred surface [`wgpu::TextureFormat`].
+    ///
+    /// If `Some`, the compositor will use this format when supported by the
+    /// surface. Use `Rgba16Float` on macOS for HDR/EDR output.
+    ///
+    /// If `None`, the compositor selects a format automatically.
+    pub format: Option<wgpu::TextureFormat>,
+
     /// The graphics backends to use.
     pub backends: wgpu::Backends,
 
@@ -33,6 +41,7 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             present_mode: wgpu::PresentMode::AutoVsync,
+            format: None,
             backends: wgpu::Backends::all(),
             default_font: Font::default(),
             default_text_size: Pixels(16.0),
@@ -57,18 +66,42 @@ impl From<graphics::Settings> for Settings {
     }
 }
 
+/// Obtains a [`wgpu::TextureFormat`] from the current environment
+/// configuration, if set.
+///
+/// The value returned by this function can be changed by setting
+/// the `ICED_FORMAT` env variable. The possible values are:
+///
+/// - `"rgba16float"` → [`wgpu::TextureFormat::Rgba16Float`] (HDR/EDR on macOS)
+/// - `"bgra8unormsrgb"` → [`wgpu::TextureFormat::Bgra8UnormSrgb`]
+/// - `"bgra8unorm"` → [`wgpu::TextureFormat::Bgra8Unorm`]
+/// - `"rgba8unormsrgb"` → [`wgpu::TextureFormat::Rgba8UnormSrgb`]
+/// - `"rgba8unorm"` → [`wgpu::TextureFormat::Rgba8Unorm`]
+pub fn format_from_env() -> Option<wgpu::TextureFormat> {
+    let format = std::env::var("ICED_FORMAT").ok()?;
+
+    match format.to_lowercase().as_str() {
+        "rgba16float" => Some(wgpu::TextureFormat::Rgba16Float),
+        "bgra8unormsrgb" => Some(wgpu::TextureFormat::Bgra8UnormSrgb),
+        "bgra8unorm" => Some(wgpu::TextureFormat::Bgra8Unorm),
+        "rgba8unormsrgb" => Some(wgpu::TextureFormat::Rgba8UnormSrgb),
+        "rgba8unorm" => Some(wgpu::TextureFormat::Rgba8Unorm),
+        _ => None,
+    }
+}
+
 /// Obtains a [`wgpu::PresentMode`] from the current environment
 /// configuration, if set.
 ///
 /// The value returned by this function can be changed by setting
 /// the `ICED_PRESENT_MODE` env variable. The possible values are:
 ///
-/// - `vsync` → [`wgpu::PresentMode::AutoVsync`]
-/// - `no_vsync` → [`wgpu::PresentMode::AutoNoVsync`]
-/// - `immediate` → [`wgpu::PresentMode::Immediate`]
-/// - `fifo` → [`wgpu::PresentMode::Fifo`]
-/// - `fifo_relaxed` → [`wgpu::PresentMode::FifoRelaxed`]
-/// - `mailbox` → [`wgpu::PresentMode::Mailbox`]
+/// - `"vsync"` → [`wgpu::PresentMode::AutoVsync`]
+/// - `"no_vsync"` → [`wgpu::PresentMode::AutoNoVsync`]
+/// - `"immediate"` → [`wgpu::PresentMode::Immediate`]
+/// - `"fifo"` → [`wgpu::PresentMode::Fifo`]
+/// - `"fifo_relaxed"` → [`wgpu::PresentMode::FifoRelaxed`]
+/// - `"mailbox"` → [`wgpu::PresentMode::Mailbox`]
 pub fn present_mode_from_env() -> Option<wgpu::PresentMode> {
     let present_mode = std::env::var("ICED_PRESENT_MODE").ok()?;
 
